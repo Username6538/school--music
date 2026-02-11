@@ -1,0 +1,5 @@
+{
+  "name": "お昼の放送リクエスト - School Music Survey",
+  "description": "学校のお昼休みに流す音楽をみんなで決めるためのリクエスト＆アンケートアプリ。音楽検索、重複投票のカウント、リアルタイムランキング機能を備えています。",
+  "requestFramePermissions": []
+}
