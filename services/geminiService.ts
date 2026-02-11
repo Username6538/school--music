@@ -1,23 +1,41 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// ここが大事！ "process.env" ではなく "import.meta.env" を使います
+// 鍵の設定
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-
-// もし鍵が見つからなかったときのための保険
-if (!apiKey) {
-  console.error("APIキーが見つかりません。VercelのEnvironment Variablesを確認してください。");
-}
-
 const genAI = new GoogleGenerativeAI(apiKey);
 
-export const getGeminiResponse = async (prompt: string) => {
+// 関数名を "searchSongs" に戻しました！
+export const searchSongs = async (query: string) => {
+  // 検索文字がないときは何もしない
+  if (!query) return [];
+
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    // AIへの命令文（JSON形式で曲のリストをください、という命令）
+    const prompt = `
+      ユーザーが学校の放送でリクエストしたい曲を検索しています。
+      検索ワード: "${query}"
+      
+      このワードに関連する曲を最大5曲、以下のJSON形式のリストで教えてください。
+      [
+        { "title": "曲名", "artist": "アーティスト名", "genre": "ジャンル" }
+      ]
+      JSON以外の余計な文字は含めないでください。
+    `;
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+    let text = response.text();
+
+    // JSON以外の文字（\`\`\`json とか）が入っていたら削除するおまじない
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    // 文字をプログラムが使えるデータ(JSON)に変換して返す
+    return JSON.parse(text);
+
   } catch (error) {
-    console.error("Error fetching Gemini response:", error);
-    return "すみません、エラーが発生しました。もう一度試してください。";
+    console.error("検索エラー:", error);
+    return [];
   }
 };
