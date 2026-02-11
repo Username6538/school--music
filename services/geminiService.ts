@@ -2,7 +2,7 @@
 import { GoogleGenAI, Type } from "@google/generative-ai";
 import { Song } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 export async function searchSongs(query: string): Promise<Song[]> {
   if (!query) return [];
