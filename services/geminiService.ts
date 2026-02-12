@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Song } from "../types";
 
 // APIクライアントの初期化。APIキーはシステムから提供される process.env.API_KEY を使用します。
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 
 /**
  * ユーザーの検索クエリに基づいて、放送リクエスト候補となる曲をAIで検索・提案します。
