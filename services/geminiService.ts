@@ -1,41 +1,51 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
+import { Song } from "../types";
 
-// 鍵の設定
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(apiKey);
+// APIクライアントの初期化。APIキーはシステムから提供される process.env.API_KEY を使用します。
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// 関数名を "searchSongs" に戻しました！
-export const searchSongs = async (query: string) => {
-  // 検索文字がないときは何もしない
+/**
+ * ユーザーの検索クエリに基づいて、放送リクエスト候補となる曲をAIで検索・提案します。
+ */
+export async function searchSongs(query: string): Promise<Song[]> {
   if (!query) return [];
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `ユーザーが学校の放送でリクエストしたい曲を検索しています。検索クエリ: "${query}" に関連する実在する日本の人気曲や定番曲を5つ提案してください。`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: "曲のタイトル" },
+              artist: { type: Type.STRING, description: "アーティスト名" },
+              genre: { type: Type.STRING, description: "ジャンル（J-POP, アニメ, ボカロ等）" },
+            },
+            required: ["title", "artist", "genre"],
+          },
+        },
+      },
+    });
 
-    // AIへの命令文（JSON形式で曲のリストをください、という命令）
-    const prompt = `
-      ユーザーが学校の放送でリクエストしたい曲を検索しています。
-      検索ワード: "${query}"
-      
-      このワードに関連する曲を最大5曲、以下のJSON形式のリストで教えてください。
-      [
-        { "title": "曲名", "artist": "アーティスト名", "genre": "ジャンル" }
-      ]
-      JSON以外の余計な文字は含めないでください。
-    `;
+    const jsonText = response.text;
+    if (!jsonText) return [];
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
-
-    // JSON以外の文字（\`\`\`json とか）が入っていたら削除するおまじない
-    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    // 文字をプログラムが使えるデータ(JSON)に変換して返す
-    return JSON.parse(text);
-
+    const results = JSON.parse(jsonText);
+    
+    // アプリケーションで使用するSongオブジェクトの形式に整形
+    return results.map((item: any) => ({
+      title: item.title,
+      artist: item.artist,
+      genre: item.genre,
+      // アーティスト名と曲名を組み合わせてユニークなIDを作成（小文字化・トリム処理）
+      id: `${item.artist}_${item.title}`.toLowerCase().replace(/\s+/g, '_'),
+    }));
   } catch (error) {
-    console.error("検索エラー:", error);
+    console.error("Gemini Search Error:", error);
     return [];
   }
-};
+}
